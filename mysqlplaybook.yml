@@ -1,0 +1,42 @@
+---
+  - hosts: demo
+    become: yes
+    connection: ssh
+    vars:
+    - mysql_root_password: password
+    tasks:
+      - name: install mysql on ubuntu
+        apt:  name=mysql update_cache=yes cache_valid_time=3600 state=present
+      - name: start mysql service
+        shell: "sudo service mysql start"
+      - name: ensure mysql is enabled on start-up
+        service: name=mysql state=started enabled=true
+      - name: install pip3
+        apt: name=python3-pip state=present 
+      - name: Install requests python package
+        pip:
+          name: requests
+        vars:
+          ansible_python_interpreter: /usr/bin/python3
+      - name: "Install ansible python3 mysql dependency"
+        apt: name=python3-mysqldb state=latest
+      - name: update mysql root password for all root accounts 
+        mysql_user:
+          name: root
+          host: "{{ item }}"
+          password: "{{ mysql_root_password }}"
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+          check_implicit_admin: yes
+          priv: "*.*:ALL,GRANT"
+        with_items:
+        - "{{ ansible_hostname }}"
+        - 172.31.91.90
+        - ::1
+        - localhost
+      - name: create a new database
+        mysql_db: name=testdb state=present login_user=root login_password="{{ mysql_root_password }}"
+      - name: add sample data to database
+        copy: src=dump.sql dest=/tmp/dump.sql
+      - name: insert sample data into database
+        mysql_db: name=testdb state=import target=/tmp/dump.sql login_user=root login_password="{{ mysql_root_password }}"

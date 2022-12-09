@@ -1,0 +1,10 @@
+---
+  - hosts: demo
+    become: yes
+    connection: ssh
+    vars:
+    - pkgname: apache2
+    tasks:
+      - name: install apache2 server on ubuntu
+        apt:  name=apache2 update_cache=yes state=present
+
